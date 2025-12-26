@@ -6,31 +6,52 @@
     <title>Groq Chatbot - AI Assistant</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
 <body>
-    <div class="app-container">
+    <div id="sidebarMainContainer">
+          <aside class="sidebar">
+           <div class="menu">
+             <div class="menu-item">
+               <span class="icon"></span>
+               <i class="fa-solid fa-plus"></i>
+               <span>New Chat </span>        
+             </div>
+          <div class="menu-item">
+            <span class="icon"></span>
+            <i class="fa-solid fa-clock-rotate-left"></i>
+             <span>History </span>        
+          </div>
+         <div class="menu-item"> 
+            <span class="icon"></span>
+            <i class="fa-solid fa-gear"></i>
+            <span>Settings</span>        
+         </div>
+        </div>
+         <div class="sidebar-profile">
+            
+            <i class="fa-solid fa-user"></i>
+            Profile
+          </div>
+       </aside>      
         <div class="main-content">
-            <!-- Header -->
+        <!-- Header -->
             <div class="header">
                 <div class="header-title">
                     <h2>🤖 AI Chat</h2>
                     <span class="header-subtitle">(In-memory session — no persistence)</span>
                 </div>
+                <div class="search-box">
+                   <input type="text"placeholder="Search.....">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
                 
-                <button class="new-chat-btn" id="newChatBtn" title="Clear chat and start fresh">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    New Chat
-                </button>
-                
-                <!-- Desktop: Show selectors inline -->
+<!-- Desktop: Show selectors inline -->
                 <div class="model-selector desktop-only">
                     <label for="providerSelect">Provider:</label>
                     <select id="providerSelect" class="model-select">
-                        <option value="groq">Groq</option>
-                        <option value="gemini">Gemini</option>
+                            <option value="groq">Groq</option>
+                            <option value="gemini">Gemini</option>
                         <option value="openrouter">OpenRouter (Free)</option>
                     </select>
                 </div>
@@ -80,6 +101,9 @@
                         </optgroup>
                     </select>
                 </div>
+                <div class="icon-btn">
+                    <i class="fa-solid fa-user"></i>
+                </div>        
 
                 <!-- Mobile: Hamburger menu button -->
                 <button class="hamburger-btn mobile-only" id="hamburgerBtn" title="Settings" aria-label="Open settings menu">
