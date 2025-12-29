@@ -75,6 +75,11 @@ button:active, .example-prompt:active {
     display: flex;
     align-items: center;
     flex-grow: 1;
+    top : 8px;
+    left : 8px;
+    z-index: 100;
+    font-weight: 600;
+    font-size: 18px;
 }
 
 .header-title h2 {
@@ -934,6 +939,21 @@ button:active, .example-prompt:active {
 
 /* Responsive */
 @media (max-width: 1024px) {
+    html,body{
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+    #sidebarMainContainer{
+        margin : 0;
+        padding : 0;
+        width : 100% ;
+    }
+    .main-content{
+        margin : 0 !important;
+        padding : 12px !important;
+        width : 100% !important;
+    }
     .messages {
         max-width: 100%;
         padding: 16px;
@@ -973,6 +993,29 @@ button:active, .example-prompt:active {
 
 @media (max-width: 768px) {
     /* Show/hide desktop vs mobile elements */
+    html,body{
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+    #sidebarMainContainer{
+        margin : 0;
+        padding : 0;
+        width : 100% ;
+    }
+    .sidebar{
+        position: fixed;
+        left: -100%;
+    }
+    .sidebar.open{
+        left: 0;
+    }
+    .main-content{
+        margin : 0 !important;
+        padding : 12px !important;
+        width : 100% !important;
+    }
+    
     .mobile-only {
         display: inline-flex !important;
     }
@@ -1574,3 +1617,18 @@ button:active, .example-prompt:active {
     height:42px;
     font-size:15px;
 }
+html,body{
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+    #sidebarMainContainer{
+        margin : 0;
+        padding : 0;
+        width : 100% ;
+    }
+    .main-content{
+        margin : 0 !important;
+        padding : 12px !important;
+        width : 100% !important;
+    }
