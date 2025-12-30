@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify,send_file
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -49,6 +49,14 @@ chat_history = []
 def index():
     """Render the main chat interface"""
     return render_template('index.html')
+
+@app.route('/exportchat', methods =['GET'])
+def export_chat():
+    with open ("chat.txt","w",encoding="utf-8") as file: 
+        for msg in chat_history:
+            file.write(f"{msg['role']}:{msg['content']}\n")
+    return send_file("chat.txt",as_attachment=True)     
+
 
 
 @app.route('/api/models', methods=['GET'])
@@ -310,6 +318,7 @@ def text_to_speech():
             'success': False,
             'error': error_msg
         }), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

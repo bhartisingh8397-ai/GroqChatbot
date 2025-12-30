@@ -668,3 +668,6 @@ function showError(message) {
 function scrollToBottom() {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+document.getElementById("exportBtn").addEventListener("click",function(){
+    window.location.href="/exportchat";
+});

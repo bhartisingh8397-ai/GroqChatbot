@@ -1,0 +1,7 @@
+user:hiii
+user:hlo
+user:how are u
+user:hiii
+assistant:Hey there! I'm doing great—thanks for asking. How can I help you today?
+user:hlo
+assistant:Hey! 👋 How’s your day going? Let me know if there’s anything you’d like to chat about or need help with!
