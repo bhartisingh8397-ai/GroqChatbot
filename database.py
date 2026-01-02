@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 app=Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URL']= 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URL']= 'sqlite:///C:/User/bharti/Desktop/chatbot/database.db'
 app. config['SQLALCHEMY_TRACK_MODIFICATIONS']= False
 
 db= SQLAlchemy(app)
