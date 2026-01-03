@@ -671,3 +671,9 @@ function scrollToBottom() {
 document.getElementById("exportBtn").addEventListener("click",function(){
     window.location.href="/exportchat";
 });
+document.getElementById("newChat").addEventListener("click" , () =>{
+document.getElementById("chatContainer").innerText="";
+
+document.getElementById("messageInput").value="";
+ chatHistory = [];
+});

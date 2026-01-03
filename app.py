@@ -205,7 +205,7 @@ def clear_history():
     })
 
 @app.route('/api/new-chat', methods=['POST'])
-def new_chat():
+def newchat():
     """Start a new chat (clear history)"""
     global chat_history
     chat_history = []
@@ -214,6 +214,7 @@ def new_chat():
         'success': True,
         'message': 'New chat started'
     })
+    
 
 @app.route('/api/sessions', methods=['GET'])
 def get_sessions():
@@ -266,6 +267,19 @@ def health_check():
             'status': 'unhealthy',
             'error': str(e)
         }), 503
+        
+#newchat 
+def create_new_chat():
+    return "chat_1"
+
+@app.route('/newChat', methods =['GET'])
+
+def newChat():
+    chat_id = create_new_chat()
+    return jsonify({
+        "status":"success",
+        "chat_id":chat_id
+    })
 
 @app.route('/api/tts', methods=['POST'])
 def text_to_speech():
