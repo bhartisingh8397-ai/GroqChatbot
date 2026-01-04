@@ -275,6 +275,8 @@ def create_new_chat():
 @app.route('/newChat', methods =['GET'])
 
 def newChat():
+    global chat_history
+    chat_history = []
     chat_id = create_new_chat()
     return jsonify({
         "status":"success",

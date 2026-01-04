@@ -671,9 +671,15 @@ function scrollToBottom() {
 document.getElementById("exportBtn").addEventListener("click",function(){
     window.location.href="/exportchat";
 });
-document.getElementById("newChat").addEventListener("click" , () =>{
-document.getElementById("chatContainer").innerText="";
 
-document.getElementById("messageInput").value="";
- chatHistory = [];
-});
+function startNewChat(){
+    fetch('/newChat')
+    .then(res => res.json())
+    .then (data => {
+        console.log ("new chat started:", data);
+    document.getElementById("messages").innerHTML="";
+    window.currentChatId = data.chat_id;
+    })
+    .catch(err => console.error(err));
+}
+
