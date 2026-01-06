@@ -30,6 +30,9 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scroll-behavior: smooth;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 /* Touch-friendly elements */
@@ -1657,4 +1660,133 @@ html,body{
 #newChat:hover{
     background-color: #ef4444;
 }
+
+.login-container{
+    width: 450px;
+    padding: 50px ;
+    border-radius:12px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+} 
+.login-container h2{
+    margin-bottom :10px;
+
+}
+.login-container p{
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+.login-container input{
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    border:1px solid ;
+    font-size: 14px;
+    outline:none;
+}
+.login-container button{
+    width: 100px;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.login-container button:hover{
+    background-color: green;
+}
+.extra{
+    margin-top:15px;
+    font-size: 13px;
+}
+.extra a{
+    text-decoration: none;
+    font-weight: 600;
+}
+.extra a:hover{
+    text-decoration: underline;
+}
+
+
+.signup-container {
+    background: #ffffff;
+    width: 460px;
+    padding: 50px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     
+    justify-content: center;
+}
+
+.signup-container h2  {
+    text-align: center;
+    margin-bottom: 5px;
+    color: #333;
+}
+.signup-container h3  {
+    text-align: center;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #777;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #444;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+}
+
+.input-group input:focus {
+    border-color: #667eea;
+}
+
+.signup-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background: #667eea;
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.signup-btn:hover {
+    background: #5a67d8;
+}
+
+.login-link {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.login-link a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: bold;
+}
