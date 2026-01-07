@@ -14,11 +14,15 @@
     <h2>Welcome 🤖 AI Chat </h2>
     <h3>Create Account</h3>
     <p class="subtitle">Join AI Chat App</p>
-    <form method="POST" action = "{{url(signup)}}">
+    <form method="POST" action = "{{url_for('signup')}}">
     
         <div class="input-group">
-            <label>Username</label>
-            <input type="text" name="username" placeholder="Enter username" required>
+            <label>User ID</label>
+            <input type="text" name="userid" placeholder="Enter userid" required>
+        </div>
+         <div class="input-group">
+            <label>Name</label>
+            <input type="text" name="name" placeholder="Enter Name" required>
         </div>
 
         <div class="input-group">
@@ -41,9 +45,10 @@
 
     <p class="login-link">
         Already have an account?
-        <a href="login.html">Login</a>
+   <a href = "{{url_for('login')}}">Login</a></p>
     </p>
 </div>
 
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

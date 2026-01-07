@@ -9,15 +9,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
 <body>
+ <form method="POST" action = "/login">
  <div class="login-container">
         <h2>Welcome 🤖 AI Chat </h2>
         <p>Login to your AI Chat Account</p>
-        <input type ="email" placeholder ="Enter email" required>
-        <input type ="password" placeholder ="Enter password" required>
+        <input type ="email" name = "email_id" placeholder ="Enter email" required>
+        <input type ="password" name = "password" placeholder ="Enter password" required>
         <button type ="submit">Login</button>
     <div class ="extra">
-        <p>Don't have an account? <a href = "{{url(signup.html)}}">Sign up</a></p>
+        <p>Don't have an account? 
+            <a href = "{{ url_for('signup') }}">Sign up</a>
+        </p>
     </div>
  </div>
+ 
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

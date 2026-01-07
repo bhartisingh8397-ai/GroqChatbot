@@ -9,15 +9,15 @@ import secrets
 from flask_sqlalchemy import SQLAlchemy
 from flask import render_template,request,redirect,url_for , session
 from database import db,User,Messages,Chat
-
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI']= 'postgresql://postgres:bharti@localhost:5432/db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS']= False
-db= SQLAlchemy(app)
-db.init_app(app)
+if 'sqlalchemy' not in app.extensions:
+  db.init_app(app)
 app.secret_key = secrets.token_hex(16)
 
 # Initialize Groq client (optional)
@@ -53,13 +53,7 @@ except Exception as e:
 # In-memory storage for chat history (session only)
 chat_history = []
 
-@app.route('/')
-def index():
-    if 'email_id' not in session:
-        return redirect(url_for("login"))
-    user = User.query.get(session["email_id"])
-    
-    return render_template('index.html', user= user)
+
 
 @app.route('/exportchat', methods =['GET'])
 def export_chat():
@@ -345,27 +339,36 @@ def text_to_speech():
             'success': False,
             'error': error_msg
         }), 500
-@app.route("/login", methods=["GET", "POST"])
+@app.route('/')
+def login_page():
+    return render_template('login.html')
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == "POST":
         email_id = request.form.get("email_id")
         password = request.form.get("password")
 
-        User = User.query.filter_by(email_id=email_id, password=password).first()
+        user = User.query.filter_by(email_id=email_id).first()
 
-        if User:
-            return redirect(url_for("index"))
+        if user and  check_password_hash (user.password, password):
+            return redirect(url_for('index'))
         else:
             return "Invalid email or password"
 
     return render_template("login.html")
-@app.route("/signup", methods=["GET", "POST"])
+@app.route('/index')
+def index():
+   
+    return render_template('index.html')
+@app.route('/signup', methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
+        id = request.form.get("id")
         name = request.form.get("name")
         email_id = request.form.get("email")
         password = request.form.get("password")
-
+        hashed_password = generate_password_hash(password)
         # check user already exists
         existing_user = User.query.filter_by(email_id = email_id).first()
         if existing_user:
@@ -375,7 +378,7 @@ def signup():
             id= id,
             name=name,
             email_id= email_id,
-            password=password   # (later hash karna)
+            password= hashed_password   # (later hash karna)
         )
 
         db.session.add(new_user)
@@ -383,7 +386,7 @@ def signup():
 
         return redirect(url_for("login"))
 
-    return render_template("signup.html")
+    return render_template('signup.html')
 
 
 if __name__ == '__main__':
