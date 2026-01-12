@@ -10,7 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import render_template,request,redirect,url_for , session
 from database import db,User,Messages,Chat
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from datetime import datetime
 load_dotenv()
 
 app = Flask(__name__)
@@ -53,7 +53,46 @@ except Exception as e:
 # In-memory storage for chat history (session only)
 chat_history = []
 
+@app.route('/send', methods =['POST'])
+def send_msg():
+    data = request.json 
 
+    chat_history.append({
+        "messages": data.get ("messages") ,
+        "time":datetime.now().isoformat()
+    })
+    
+    print("history:",chat_history)
+    return jsonify({"status":"success"})
+@app.route('/history_page')
+def history_page():
+    return render_template('history.html',chats = chat_history)
+
+@app.route("/history", methods=["GET"])
+def history():
+    
+    try:
+        formatted = []
+        for item in chat_history:
+            t = item.get("time")
+            if t is None:
+                t = datetime.now()
+            elif isinstance(t, str):
+                try:
+                    t = datetime.fromisoformat(t)
+                except:
+                    t = datetime.now()
+            # t ab hamesha datetime object hai
+            formatted.append({
+                "messages": item.get("content", "no msg"),
+                "time": t.isoformat(),
+                "role": item.get("role", "user")
+            })
+        return jsonify(formatted)
+    except Exception as e:
+        # yaha print kare console me exact error
+        print("History route error:", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/exportchat', methods =['GET'])
 def export_chat():

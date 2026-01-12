@@ -684,3 +684,62 @@ function startNewChat(){
 }
 
 
+function sendMsg(){
+    let msg =document.getElementById("messages").value;
+    if (msg ==="") return;
+
+    fetch ("/sendBtn",{
+        method:"POST",
+        headers: {"Content-type":"application/json"},
+        body :JSON.stringify({messages:msg})
+    });
+    document.getElementById("messages").value="";
+}
+
+
+
+ document.addEventListener('DOMContentLoaded', function () {
+            fetch('/api/history')
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('historyList');
+                    list.innerHTML = ''; // Clear loading message
+
+                    if (!data.success || !data.history || data.history.length === 0) {
+                        list.innerHTML = '<li style="text-align: center; padding: 20px; color: #666;">No history found.</li>';
+                        return;
+                    }
+
+                    // Loop through history in reverse (newest first)
+                    [...data.history].reverse().forEach(msg => {
+                        const li = document.createElement('li');
+                        li.className = 'history-item';
+
+                        const roleClass = msg.role === 'user' ? 'role-user' : 'role-assistant';
+                        const time = new Date(msg.timestamp || msg.time).toLocaleString();
+
+                        li.innerHTML = `
+                            <div class="msg-header">
+                                <span class="role-badge ${roleClass}">${msg.role}</span>
+                                <span class="timestamp">${time}</span>
+                            </div>
+                            <div class="msg-content">${escapeHtml(msg.content || msg.messages)}</div>
+                        `;
+                        list.appendChild(li);
+                    });
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    document.getElementById('historyList').innerHTML = '<li style="text-align: center; color: red;">Failed to load history.</li>';
+                });
+        });
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat History</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-3px);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .history-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .chat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .chat-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .chat-item.user {
+            border-left: 4px solid #667eea;
+        }
+
+        .chat-item.assistant {
+            border-left: 4px solid #10b981;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .role-badge.user {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .role-badge.assistant {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .timestamp {
+            font-size: 0.8rem;
+            color: #888;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chat-content {
+            color: #d0d0d0;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state h2 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #888;
+        }
+
+        .empty-state p {
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/" class="back-btn"><i class="fa-solid fa-arrow-left"></i></a>
+            <h1><i class="fa-solid fa-clock-rotate-left"></i> Chat History</h1>
+        </div>
+
+        {% if chats and chats|length > 0 %}
+        <ul class="history-list">
+            {% for chat in chats %}
+            <li class="chat-item {{ chat.role }}">
+                <div class="chat-header">
+                    <span class="role-badge {{ chat.role }}">
+                        {% if chat.role == 'user' %}
+                        <i class="fa-solid fa-user"></i> You
+                        {% else %}
+                        <i class="fa-solid fa-robot"></i> AI
+                        {% endif %}
+                    </span>
+                    <span class="timestamp">
+                        <i class="fa-regular fa-clock"></i>
+                        {{ chat.time if chat.time else 'Just now' }}
+                    </span>
+                </div>
+                <div class="chat-content">{{ chat.content }}</div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state">
+            <i class="fa-regular fa-comments"></i>
+            <h2>No Chat History Yet</h2>
+            <p>Start a conversation to see your chat history here!</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>

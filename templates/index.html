@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,55 +9,59 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
+
 <body>
     <div id="sidebarMainContainer">
-          <aside class="sidebar">
-           <div class="menu">
-             <div class="menu-item">
-               <span class="icon"></span>
-               <i class="fa-solid fa-plus"></i>
-               <span id ="newChat" onclick = "startNewChat()">New Chat </span>        
-             </div>
-          <div class="menu-item">
-            <span class="icon"></span>
-            <i class="fa-solid fa-clock-rotate-left"></i>
-             <span>History </span>        
-          </div>
-         <div class="menu-item"> 
-            <span class="icon"></span>
-            <i class="fa-solid fa-gear"></i>
-            <span>Settings</span>        
-         </div>
-          <div class="menu-item"> 
-              <span class="icon"></span>
-            <i class="fa-solid fa-file-export"></i>
-         <button id ="exportBtn">Export Chat</button>
-          </div>
-        </div>
-         <div class="sidebar-profile">
-            
-            <i class="fa-solid fa-user"></i>
-            Profile
-          </div>
-       </aside>      
+        <aside class="sidebar">
+            <div class="menu">
+                <div class="menu-item">
+                    <span class="icon"></span>
+                    <i class="fa-solid fa-plus"></i>
+                    <span id="newChat" onclick="startNewChat()">New Chat </span>
+                </div>
+                <div class="menu-item">
+                    <span class="icon"></span>
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span id="historyBtn" onclick="window.location.href='/history_page'">History </span>
+                </div>
+                <div id="historyBox" style="display:none">
+                    <ul id="historyList"></ul>
+                </div>
+                <div class="menu-item">
+                    <span class="icon"></span>
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Settings</span>
+                </div>
+                <div class="menu-item">
+                    <span class="icon"></span>
+                    <i class="fa-solid fa-file-export"></i>
+                    <button id="exportBtn">Export Chat</button>
+                </div>
+            </div>
+            <div class="sidebar-profile">
+
+                <i class="fa-solid fa-user"></i>
+                Profile
+            </div>
+        </aside>
         <div class="main-content">
-        <!-- Header -->
+            <!-- Header -->
             <div class="header">
                 <div class="header-title">
                     <h2>🤖 AI Chat</h2>
                     <span class="header-subtitle">(In-memory session — no persistence)</span>
                 </div>
                 <div class="search-box">
-                   <input type="text"placeholder="Search.....">
+                    <input type="text" placeholder="Search.....">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </div>
-                
-<!-- Desktop: Show selectors inline -->
+
+                <!-- Desktop: Show selectors inline -->
                 <div class="model-selector desktop-only">
                     <label for="providerSelect">Provider:</label>
                     <select id="providerSelect" class="model-select">
-                            <option value="groq">Groq</option>
-                            <option value="gemini">Gemini</option>
+                        <option value="groq">Groq</option>
+                        <option value="gemini">Gemini</option>
                         <option value="openrouter">OpenRouter (Free)</option>
                     </select>
                 </div>
@@ -67,10 +72,11 @@
                         <option value="">Loading models...</option>
                     </select>
                 </div>
-                
+
                 <div class="tts-selector desktop-only">
                     <label for="ttsSelect">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                             <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
                         </svg>
@@ -108,10 +114,11 @@
                 </div>
                 <div class="icon-btn">
                     <i class="fa-solid fa-user"></i>
-                </div>        
+                </div>
 
                 <!-- Mobile: Hamburger menu button -->
-                <button class="hamburger-btn mobile-only" id="hamburgerBtn" title="Settings" aria-label="Open settings menu">
+                <button class="hamburger-btn mobile-only" id="hamburgerBtn" title="Settings"
+                    aria-label="Open settings menu">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="3" y1="12" x2="21" y2="12"></line>
                         <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -125,7 +132,8 @@
                 <div class="settings-header">
                     <h3>Settings</h3>
                     <button class="close-settings-btn" id="closeSettingsBtn" aria-label="Close settings">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
                         </svg>
@@ -147,10 +155,11 @@
                             <option value="">Loading models...</option>
                         </select>
                     </div>
-                    
+
                     <div class="setting-group">
                         <label for="mobileTTSSelect">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 6px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 6px;">
                                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                                 <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
                             </svg>
@@ -199,7 +208,7 @@
                     <div class="welcome-content">
                         <h1>🤖 Welcome to Groq AI Chat</h1>
                         <p class="welcome-subtitle">Powered by 20+ open-source AI models</p>
-                        
+
                         <!-- Quick Guide -->
                         <div class="quick-guide">
                             <div class="guide-card">
@@ -212,14 +221,18 @@
                                     <span class="model-tag">Qwen 2.5</span>
                                 </div>
                             </div>
-                            
+
                             <div class="guide-card">
                                 <div class="guide-icon">🔊</div>
                                 <h3>Text-to-Speech</h3>
                                 <p>Choose from <strong>23 voices</strong> to hear responses</p>
-                                <p class="guide-hint">Click <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg> on any response</p>
+                                <p class="guide-hint">Click <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2"
+                                        style="display: inline; vertical-align: middle;">
+                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                    </svg> on any response</p>
                             </div>
-                            
+
                             <div class="guide-card">
                                 <div class="guide-icon">💬</div>
                                 <h3>Start Chatting</h3>
@@ -227,7 +240,7 @@
                                 <p class="guide-hint"><kbd>Enter</kbd> to send • <kbd>Shift+Enter</kbd> for new line</p>
                             </div>
                         </div>
-                        
+
                         <!-- Example Prompts -->
                         <div class="prompts-section">
                             <h3 class="prompts-title">✨ Try These Prompts</h3>
@@ -240,7 +253,8 @@
                                     <span class="prompt-icon">💻</span>
                                     <span class="prompt-text">Write Python code</span>
                                 </button>
-                                <button class="example-prompt" data-prompt="What are the best practices for web development?">
+                                <button class="example-prompt"
+                                    data-prompt="What are the best practices for web development?">
                                     <span class="prompt-icon">🌐</span>
                                     <span class="prompt-text">Web development tips</span>
                                 </button>
@@ -248,7 +262,8 @@
                                     <span class="prompt-icon">🚀</span>
                                     <span class="prompt-text">Brainstorm ideas</span>
                                 </button>
-                                <button class="example-prompt" data-prompt="Create a detailed comparison table of programming languages">
+                                <button class="example-prompt"
+                                    data-prompt="Create a detailed comparison table of programming languages">
                                     <span class="prompt-icon">📊</span>
                                     <span class="prompt-text">Compare programming languages</span>
                                 </button>
@@ -260,7 +275,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="messages" id="messages">
                     <!-- Messages will be added here -->
                 </div>
@@ -269,14 +284,10 @@
             <!-- Input Area -->
             <div class="input-container">
                 <div class="input-wrapper">
-                    <textarea 
-                        id="messageInput" 
-                        placeholder="Send a message..." 
-                        rows="1"
-                        maxlength="4000"
-                    ></textarea>
+                    <textarea id="messageInput" placeholder="Send a message..." rows="1" maxlength="4000"></textarea>
                     <button id="sendBtn" class="send-btn" disabled>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <line x1="22" y1="2" x2="11" y2="13"></line>
                             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                         </svg>
@@ -288,8 +299,9 @@
             </div>
         </div>
     </div>
-    
+
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
+
 </html>
