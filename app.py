@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify,send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session, Response
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -7,18 +7,41 @@ from gemini_client import GeminiClient
 from openrouter_client import OpenRouterClient
 import secrets
 from flask_sqlalchemy import SQLAlchemy
-from flask import render_template,request,redirect,url_for , session
-from database import db,User,Messages,Chat
+from database import db, User, Messages, Chat
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from authlib.integrations.flask_client import OAuth
+
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI']= 'postgresql://postgres:bharti@localhost:5432/db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS']= False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:bharti@localhost:5432/db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 if 'sqlalchemy' not in app.extensions:
-  db.init_app(app)
+    db.init_app(app)
 app.secret_key = secrets.token_hex(16)
+
+# Initialize OAuth
+oauth = OAuth(app)
+
+# Configure Google OAuth
+google = oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
+
+# Create tables if they don't exist
+try:
+    with app.app_context():
+        db.create_all()
+        print("[INFO] Database tables created successfully!")
+except Exception as e:
+    print(f"[ERROR] Database connection failed: {e}")
+    print("[ERROR] Make sure PostgreSQL is running and accessible!")
 
 # Initialize Groq client (optional)
 try:
@@ -50,57 +73,121 @@ except Exception as e:
     traceback.print_exc()
     openrouter_client = None
 
-# In-memory storage for chat history (session only)
-chat_history = []
 
-@app.route('/send', methods =['POST'])
-def send_msg():
-    data = request.json 
+# Helper function to get current user
+def get_current_user():
+    """Get the currently logged in user from session"""
+    user_id = session.get('user_id')
+    if user_id:
+        return User.query.get(user_id)
+    return None
 
-    chat_history.append({
-        "messages": data.get ("messages") ,
-        "time":datetime.now().isoformat()
-    })
+
+# Helper function to get or create current chat
+def get_or_create_chat(user_id):
+    """Get current chat from session or create a new one"""
+    chat_id = session.get('current_chat_id')
     
-    print("history:",chat_history)
-    return jsonify({"status":"success"})
+    if chat_id:
+        chat = Chat.query.get(chat_id)
+        if chat and chat.user_id == user_id:
+            return chat
+    
+    # Create new chat
+    new_chat = Chat(
+        user_id=user_id,
+        title="New Chat",
+        created_at=datetime.utcnow()
+    )
+    db.session.add(new_chat)
+    db.session.commit()
+    session['current_chat_id'] = new_chat.id
+    return new_chat
+
+
+@app.route('/send', methods=['POST'])
+def send_msg():
+    data = request.json
+    user = get_current_user()
+    
+    if user:
+        chat = get_or_create_chat(user.id)
+        new_message = Messages(
+            chat_id=chat.id,
+            content_text=data.get("messages"),
+            created_at=datetime.utcnow()
+        )
+        db.session.add(new_message)
+        db.session.commit()
+    
+    return jsonify({"status": "success"})
+
+
 @app.route('/history_page')
 def history_page():
-    return render_template('history.html',chats = chat_history)
+    chats = []
+    
+    # Get all chats from database (no login required)
+    all_chats = Chat.query.order_by(Chat.created_at.desc()).all()
+    print(f"[DEBUG] history_page - found {len(all_chats)} total chats")
+    
+    for chat in all_chats:
+        chat_data = {
+            'id': chat.id,
+            'title': chat.title,
+            'created_at': chat.created_at.isoformat() if chat.created_at else None,
+            'messages': []
+        }
+        msgs = Messages.query.filter_by(chat_id=chat.id).order_by(Messages.created_at).all()
+        for msg in msgs:
+            text = msg.content_text or ''
+            role = 'assistant' if text.startswith('[ASSISTANT]') else 'user'
+            content = text.replace('[USER] ', '').replace('[ASSISTANT] ', '')
+            chat_data['messages'].append({
+                'role': role,
+                'content': content,
+                'time': msg.created_at.isoformat() if msg.created_at else None
+            })
+        chats.append(chat_data)
+    
+    return render_template('history.html', chats=chats)
+
 
 @app.route("/history", methods=["GET"])
 def history():
-    
     try:
+        user = get_current_user()
         formatted = []
-        for item in chat_history:
-            t = item.get("time")
-            if t is None:
-                t = datetime.now()
-            elif isinstance(t, str):
-                try:
-                    t = datetime.fromisoformat(t)
-                except:
-                    t = datetime.now()
-            # t ab hamesha datetime object hai
-            formatted.append({
-                "messages": item.get("content", "no msg"),
-                "time": t.isoformat(),
-                "role": item.get("role", "user")
-            })
+        
+        if user:
+            chat_id = session.get('current_chat_id')
+            if chat_id:
+                messages = Messages.query.filter_by(chat_id=chat_id).order_by(Messages.created_at).all()
+                for msg in messages:
+                    formatted.append({
+                        "messages": msg.content,
+                        "time": msg.created_at.isoformat() if msg.created_at else datetime.now().isoformat(),
+                        "role": msg.role or "user"
+                    })
+        
         return jsonify(formatted)
     except Exception as e:
-        # yaha print kare console me exact error
         print("History route error:", e)
         return jsonify({"error": str(e)}), 500
 
-@app.route('/exportchat', methods =['GET'])
-def export_chat():
-    with open ("chat.txt","w",encoding="utf-8") as file: 
-        for msg in chat_history:
-            file.write(f"{msg['role']}:{msg['content']}\n")
-    return send_file("chat.txt",as_attachment=True)     
 
+@app.route('/exportchat', methods=['GET'])
+def export_chat():
+    user = get_current_user()
+    chat_id = session.get('current_chat_id')
+    
+    with open("chat.txt", "w", encoding="utf-8") as file:
+        if user and chat_id:
+            messages = Messages.query.filter_by(chat_id=chat_id).order_by(Messages.created_at).all()
+            for msg in messages:
+                file.write(f"{msg.role}:{msg.content}\n")
+    
+    return send_file("chat.txt", as_attachment=True)
 
 
 @app.route('/api/models', methods=['GET'])
@@ -163,19 +250,22 @@ def get_models():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """Handle chat messages"""
-    global chat_history
-    
+    """Handle chat messages - saves to database for permanent storage"""
     try:
         data = request.json
         user_message = data.get('message')
         selected_model = data.get('model', 'mixtral-8x7b-32768')
         provider = (data.get('provider') or 'groq').lower()
+        
+        print(f"[DEBUG] /api/chat - message: {user_message[:50] if user_message else 'None'}...")
+        print(f"[DEBUG] /api/chat - model: {selected_model}, provider: {provider}")
+        
         if provider == 'groq' and groq_client is None and gemini_client is not None:
-            # Fallback to Gemini if Groq is not configured
             provider = 'gemini'
+            print(f"[DEBUG] /api/chat - Switched to gemini (groq not available)")
         
         if not user_message:
             return jsonify({
@@ -183,116 +273,298 @@ def chat():
                 'error': 'Message is required'
             }), 400
         
-        # Add user message to in-memory history
-        chat_history.append({
-            'role': 'user',
-            'content': user_message,
-            'timestamp': datetime.now().isoformat(),
-            'model': selected_model
-        })
+        user = get_current_user()
+        chat_history = []
         
-        # Prepare messages for provider API (includes the latest user message)
-        messages = [{'role': msg['role'], 'content': msg['content']} for msg in chat_history]
+        print(f"[DEBUG] /api/chat - user logged in: {user is not None}")
+        
+        # Get or create chat (works with or without login)
+        chat_id = session.get('current_chat_id')
+        chat_obj = None
+        
+        if chat_id:
+            chat_obj = Chat.query.get(chat_id)
+        
+        if not chat_obj:
+            # Create new chat (for guest users, user_id will be None)
+            chat_obj = Chat(
+                user_id=user.id if user else None,
+                title="New Chat",
+                created_at=datetime.utcnow()
+            )
+            db.session.add(chat_obj)
+            db.session.commit()
+            session['current_chat_id'] = chat_obj.id
+            print(f"[DEBUG] /api/chat - Created new chat_id: {chat_obj.id}")
+        
+        print(f"[DEBUG] /api/chat - Using chat_id: {chat_obj.id}")
+        
+        # Save user message to database
+        user_msg = Messages(
+            chat_id=chat_obj.id,
+            content_text=f"[USER] {user_message}",
+            created_at=datetime.utcnow()
+        )
+        db.session.add(user_msg)
+        db.session.commit()
+        
+        # Update chat title if it's the first message
+        msg_count = Messages.query.filter_by(chat_id=chat_obj.id).count()
+        if chat_obj.title == "New Chat" and msg_count == 1:
+            chat_obj.title = user_message[:50] + "..." if len(user_message) > 50 else user_message
+            db.session.commit()
+        
+        # Load chat history from database for context
+        db_messages = Messages.query.filter_by(chat_id=chat_obj.id).order_by(Messages.created_at).all()
+        chat_history = []
+        for msg in db_messages:
+            text = msg.content_text or ''
+            if text.startswith('[USER] '):
+                chat_history.append({'role': 'user', 'content': text[7:]})
+            elif text.startswith('[ASSISTANT] '):
+                chat_history.append({'role': 'assistant', 'content': text[12:]})
+        
+        print(f"[DEBUG] /api/chat - chat_history length: {len(chat_history)}")
         
         # Get response from selected provider
+        print(f"[DEBUG] /api/chat - Calling {provider} API...")
+        
         if provider == 'gemini':
             if not gemini_client:
+                print(f"[DEBUG] /api/chat - Gemini client not configured!")
                 return jsonify({'success': False, 'error': 'Gemini client not configured. Set GEMINI_API_KEY.'}), 400
-            assistant_message = gemini_client.chat(messages, model=selected_model)
+            assistant_message = gemini_client.chat(chat_history, model=selected_model)
         elif provider == 'openrouter':
             if not openrouter_client:
+                print(f"[DEBUG] /api/chat - OpenRouter client not configured!")
                 return jsonify({'success': False, 'error': 'OpenRouter client not configured. Set OPENROUTER_API_KEY.'}), 400
-            assistant_message = openrouter_client.chat(messages, model=selected_model)
+            assistant_message = openrouter_client.chat(chat_history, model=selected_model)
         else:
             if not groq_client:
+                print(f"[DEBUG] /api/chat - Groq client not configured!")
                 return jsonify({'success': False, 'error': 'Groq client not configured. Set GROQ_API_KEY.'}), 400
-            assistant_message = groq_client.chat(messages, model=selected_model)
+            assistant_message = groq_client.chat(chat_history, model=selected_model)
         
-        # Add assistant message to in-memory history
-        timestamp = datetime.now().isoformat()
-        chat_history.append({
-            'role': 'assistant',
-            'content': assistant_message,
-            'timestamp': timestamp,
-            'model': selected_model
-        })
+        print(f"[DEBUG] /api/chat - Got response: {assistant_message[:50] if assistant_message else 'None'}...")
+        
+        timestamp = datetime.utcnow()
+        
+        # Save assistant message to database (always, not just when logged in)
+        if chat_obj:
+            assistant_msg = Messages(
+                chat_id=chat_obj.id,
+                content_text=f"[ASSISTANT] {assistant_message}",
+                created_at=timestamp
+            )
+            db.session.add(assistant_msg)
+            db.session.commit()
+            print(f"[DEBUG] /api/chat - Saved assistant message to database")
         
         return jsonify({
             'success': True,
             'message': assistant_message,
-            'timestamp': timestamp
+            'timestamp': timestamp.isoformat()
         })
         
     except Exception as e:
+        import traceback
+        print(f"[ERROR] /api/chat - Exception: {str(e)}")
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
+
 @app.route('/api/history', methods=['GET'])
 def get_history():
-    """Get chat history for current session (in-memory)"""
+    """Get chat history for current session from database"""
+    user = get_current_user()
+    chat_id = session.get('current_chat_id')
+    
+    if user and chat_id:
+        messages = Messages.query.filter_by(chat_id=chat_id).order_by(Messages.created_at).all()
+        history = [{
+            'role': msg.role,
+            'content': msg.content,
+            'timestamp': msg.created_at.isoformat() if msg.created_at else None,
+            'model': msg.model
+        } for msg in messages]
+        return jsonify({
+            'success': True,
+            'history': history
+        })
+    
     return jsonify({
         'success': True,
-        'history': chat_history
+        'history': []
     })
+
 
 @app.route('/api/clear', methods=['POST'])
 def clear_history():
-    """Clear chat history"""
-    global chat_history
-    chat_history = []
+    """Clear chat history for current chat"""
+    user = get_current_user()
+    chat_id = session.get('current_chat_id')
+    
+    if user and chat_id:
+        Messages.query.filter_by(chat_id=chat_id).delete()
+        db.session.commit()
     
     return jsonify({
         'success': True,
         'message': 'Chat history cleared'
     })
 
+
 @app.route('/api/new-chat', methods=['POST'])
 def newchat():
-    """Start a new chat (clear history)"""
-    global chat_history
-    chat_history = []
+    """Start a new chat - creates new chat in database"""
+    user = get_current_user()
+    
+    if user:
+        new_chat = Chat(
+            user_id=user.id,
+            title="New Chat",
+            created_at=datetime.utcnow()
+        )
+        db.session.add(new_chat)
+        db.session.commit()
+        session['current_chat_id'] = new_chat.id
+        
+        return jsonify({
+            'success': True,
+            'message': 'New chat started',
+            'chat_id': new_chat.id
+        })
     
     return jsonify({
         'success': True,
         'message': 'New chat started'
     })
-    
+
 
 @app.route('/api/sessions', methods=['GET'])
 def get_sessions():
-    """Get all chat sessions - disabled for no-database mode"""
+    """Get all chat sessions for the current user"""
+    user = get_current_user()
+    
+    if user:
+        chats = Chat.query.filter_by(user_id=user.id).order_by(Chat.updated_at.desc()).all()
+        sessions = [{
+            'id': chat.id,
+            'title': chat.title,
+            'created_at': chat.created_at.isoformat() if chat.created_at else None,
+            'updated_at': chat.updated_at.isoformat() if chat.updated_at else None,
+            'message_count': len(chat.messages)
+        } for chat in chats]
+        
+        return jsonify({
+            'success': True,
+            'sessions': sessions
+        })
+    
     return jsonify({
         'success': True,
-        'sessions': []  # No sessions in memory-only mode
+        'sessions': []
     })
+
 
 @app.route('/api/switch-session', methods=['POST'])
 def switch_session():
-    """Switch to a different session - disabled for no-database mode"""
+    """Switch to a different chat session"""
+    user = get_current_user()
+    data = request.json
+    chat_id = data.get('chat_id')
+    
+    if user and chat_id:
+        chat = Chat.query.get(chat_id)
+        if chat and chat.user_id == user.id:
+            session['current_chat_id'] = chat.id
+            return jsonify({
+                'success': True,
+                'message': f'Switched to chat: {chat.title}'
+            })
+        return jsonify({
+            'success': False,
+            'error': 'Chat not found or access denied'
+        }), 404
+    
     return jsonify({
         'success': False,
-        'error': 'Sessions not available in memory-only mode'
-    }), 501
+        'error': 'User not logged in or chat_id not provided'
+    }), 400
+
+
+@app.route('/api/delete-chat', methods=['POST'])
+def delete_chat():
+    """Delete a chat and all its messages"""
+    data = request.json
+    chat_id = data.get('chat_id')
+    
+    if not chat_id:
+        return jsonify({
+            'success': False,
+            'error': 'chat_id not provided'
+        }), 400
+    
+    chat = Chat.query.get(chat_id)
+    if not chat:
+        return jsonify({
+            'success': False,
+            'error': 'Chat not found'
+        }), 404
+    
+    # Delete all messages first, then the chat
+    Messages.query.filter_by(chat_id=chat_id).delete()
+    db.session.delete(chat)
+    db.session.commit()
+    
+    # If deleting current chat, clear session
+    if session.get('current_chat_id') == chat_id:
+        session.pop('current_chat_id', None)
+    
+    return jsonify({
+        'success': True,
+        'message': 'Chat deleted successfully'
+    })
+
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     """Get statistics"""
+    user = get_current_user()
+    
+    if user:
+        total_chats = Chat.query.filter_by(user_id=user.id).count()
+        total_messages = Messages.query.join(Chat).filter(Chat.user_id == user.id).count()
+        user_messages = Messages.query.join(Chat).filter(Chat.user_id == user.id, Messages.role == 'user').count()
+        assistant_messages = Messages.query.join(Chat).filter(Chat.user_id == user.id, Messages.role == 'assistant').count()
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_chats': total_chats,
+                'total_messages': total_messages,
+                'user_messages': user_messages,
+                'assistant_messages': assistant_messages
+            }
+        })
+    
     return jsonify({
         'success': True,
         'stats': {
-            'total_messages': len(chat_history),
-            'user_messages': sum(1 for msg in chat_history if msg['role'] == 'user'),
-            'assistant_messages': sum(1 for msg in chat_history if msg['role'] == 'assistant')
+            'total_messages': 0,
+            'user_messages': 0,
+            'assistant_messages': 0
         }
     })
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for container orchestration"""
     try:
-        # Check any available provider API (simple model list)
         if groq_client is not None:
             _ = groq_client.list_models()
             provider = 'groq'
@@ -305,27 +577,38 @@ def health_check():
         else:
             return jsonify({'status': 'unhealthy', 'error': 'No AI provider configured'}), 503
 
-        return jsonify({'status': 'healthy', 'api': provider, 'messages': len(chat_history)}), 200
+        return jsonify({'status': 'healthy', 'api': provider}), 200
     except Exception as e:
         return jsonify({
             'status': 'unhealthy',
             'error': str(e)
         }), 503
-        
-#newchat 
-def create_new_chat():
-    return "chat_1"
 
-@app.route('/newChat', methods =['GET'])
 
+@app.route('/newChat', methods=['GET'])
 def newChat():
-    global chat_history
-    chat_history = []
-    chat_id = create_new_chat()
+    user = get_current_user()
+    
+    if user:
+        new_chat = Chat(
+            user_id=user.id,
+            title="New Chat",
+            created_at=datetime.utcnow()
+        )
+        db.session.add(new_chat)
+        db.session.commit()
+        session['current_chat_id'] = new_chat.id
+        
+        return jsonify({
+            "status": "success",
+            "chat_id": new_chat.id
+        })
+    
     return jsonify({
-        "status":"success",
-        "chat_id":chat_id
+        "status": "success",
+        "chat_id": "guest_chat"
     })
+
 
 @app.route('/api/tts', methods=['POST'])
 def text_to_speech():
@@ -342,19 +625,15 @@ def text_to_speech():
                 'error': 'Text is required'
             }), 400
         
-        # Limit text length (Groq supports max 10K characters)
         if len(text) > 10000:
             text = text[:10000]
         
-        # Call Groq TTS API
         audio_content = groq_client.text_to_speech(
             text=text,
             model=model,
             voice=voice
         )
         
-        # Return audio as WAV file
-        from flask import Response
         return Response(
             audio_content,
             mimetype='audio/wav',
@@ -366,7 +645,6 @@ def text_to_speech():
     except Exception as e:
         error_msg = str(e)
         
-        # Check for terms acceptance error
         if 'terms acceptance' in error_msg.lower():
             return jsonify({
                 'success': False,
@@ -378,9 +656,12 @@ def text_to_speech():
             'success': False,
             'error': error_msg
         }), 500
+
+
 @app.route('/')
 def login_page():
     return render_template('login.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -388,36 +669,157 @@ def login():
         email_id = request.form.get("email_id")
         password = request.form.get("password")
 
+        print(f"[DEBUG] Login attempt - email: {email_id}")
+        
         user = User.query.filter_by(email_id=email_id).first()
-
-        if user and  check_password_hash (user.password, password):
+        
+        if not user:
+            print(f"[DEBUG] Login failed - User not found: {email_id}")
+            return "User not found. Please sign up first."
+        
+        print(f"[DEBUG] User found - id: {user.id}, name: {user.name}")
+        print(f"[DEBUG] Stored password hash: {user.password[:20] if user.password else 'None'}...")
+        
+        # Check if password is hashed (starts with typical hash prefixes)
+        is_hashed = user.password and (user.password.startswith('pbkdf2:') or user.password.startswith('scrypt:') or user.password.startswith('$'))
+        
+        if not is_hashed:
+            print(f"[DEBUG] Password is NOT hashed! Checking plain text...")
+            # For old users with unhashed passwords - direct comparison
+            if user.password == password:
+                print(f"[DEBUG] Plain text password matched! Updating to hashed...")
+                # Update to hashed password
+                user.password = generate_password_hash(password)
+                db.session.commit()
+                
+                session['user_id'] = user.id
+                session['user_name'] = user.name
+                
+                latest_chat = Chat.query.filter_by(user_id=user.id).order_by(Chat.created_at.desc()).first()
+                if latest_chat:
+                    session['current_chat_id'] = latest_chat.id
+                
+                return redirect(url_for('index'))
+            else:
+                print(f"[DEBUG] Plain text password did NOT match")
+                return "Invalid password"
+        
+        # Normal hashed password check
+        if check_password_hash(user.password, password):
+            print(f"[DEBUG] Login successful!")
+            session['user_id'] = user.id
+            session['user_name'] = user.name
+            
+            latest_chat = Chat.query.filter_by(user_id=user.id).order_by(Chat.created_at.desc()).first()
+            if latest_chat:
+                session['current_chat_id'] = latest_chat.id
+            
             return redirect(url_for('index'))
         else:
-            return "Invalid email or password"
+            print(f"[DEBUG] Hashed password did NOT match")
+            return "Invalid password"
 
     return render_template("login.html")
+
+
+@app.route('/login/google')
+def google_login():
+    """Initiate Google OAuth login"""
+    redirect_uri = url_for('google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.route('/callback')
+def google_callback():
+    """Handle Google OAuth callback"""
+    try:
+        token = google.authorize_access_token()
+        user_info = token.get('userinfo')
+        
+        if not user_info:
+            # Fallback: fetch user info from Google
+            resp = google.get('https://openidconnect.googleapis.com/v1/userinfo')
+            user_info = resp.json()
+        
+        google_id = user_info.get('sub')
+        email = user_info.get('email')
+        name = user_info.get('name', email.split('@')[0] if email else 'User')
+        
+        print(f"[DEBUG] Google OAuth - google_id: {google_id}, email: {email}, name: {name}")
+        
+        # Check if user exists by google_id
+        user = User.query.filter_by(google_id=google_id).first()
+        
+        if not user:
+            # Check if user exists by email (link accounts)
+            user = User.query.filter_by(email_id=email).first()
+            if user:
+                # Link Google account to existing user
+                user.google_id = google_id
+                db.session.commit()
+                print(f"[DEBUG] Linked Google account to existing user: {user.id}")
+            else:
+                # Create new user
+                user = User(
+                    name=name,
+                    email_id=email,
+                    google_id=google_id,
+                    password=None  # No password for Google-only users
+                )
+                db.session.add(user)
+                db.session.commit()
+                print(f"[DEBUG] Created new user via Google: {user.id}")
+        
+        # Log the user in
+        session['user_id'] = user.id
+        session['user_name'] = user.name
+        
+        # Get or create latest chat
+        latest_chat = Chat.query.filter_by(user_id=user.id).order_by(Chat.created_at.desc()).first()
+        if latest_chat:
+            session['current_chat_id'] = latest_chat.id
+        
+        print(f"[DEBUG] Google OAuth login successful for user: {user.id}")
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        print(f"[ERROR] Google OAuth callback failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Google authentication failed: {str(e)}. <a href='/login'>Try again</a>"
+
+
+@app.route('/logout')
+def logout():
+    """Logout user and clear session"""
+    session.clear()
+    return redirect(url_for('login_page'))
+
+
 @app.route('/index')
 def index():
-   
-    return render_template('index.html')
+    user = get_current_user()
+    user_name = user.name if user else "Guest User"
+    return render_template('index.html', user_name=user_name)
+
+
 @app.route('/signup', methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
-        id = request.form.get("id")
+        id = request.form.get("userid")
         name = request.form.get("name")
         email_id = request.form.get("email")
         password = request.form.get("password")
         hashed_password = generate_password_hash(password)
-        # check user already exists
-        existing_user = User.query.filter_by(email_id = email_id).first()
+        
+        existing_user = User.query.filter_by(email_id=email_id).first()
         if existing_user:
             return "User already exists"
 
         new_user = User(
-            id= id,
             name=name,
-            email_id= email_id,
-            password= hashed_password   # (later hash karna)
+            email_id=email_id,
+            password=hashed_password
         )
 
         db.session.add(new_user)

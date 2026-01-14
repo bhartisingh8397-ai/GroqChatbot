@@ -4,134 +4,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Groq Chatbot - AI Assistant</title>
+    <title>AI Chat - Your Intelligent Assistant</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
 
 <body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="orb orb-4"></div>
+    </div>
+    <div class="grid-overlay"></div>
+
     <div id="sidebarMainContainer">
+        <!-- Premium Sidebar -->
         <aside class="sidebar">
-            <div class="menu">
-                <div class="menu-item">
-                    <span class="icon"></span>
-                    <i class="fa-solid fa-plus"></i>
-                    <span id="newChat" onclick="startNewChat()">New Chat </span>
-                </div>
-                <div class="menu-item">
-                    <span class="icon"></span>
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span id="historyBtn" onclick="window.location.href='/history_page'">History </span>
-                </div>
-                <div id="historyBox" style="display:none">
-                    <ul id="historyList"></ul>
-                </div>
-                <div class="menu-item">
-                    <span class="icon"></span>
-                    <i class="fa-solid fa-gear"></i>
-                    <span>Settings</span>
-                </div>
-                <div class="menu-item">
-                    <span class="icon"></span>
-                    <i class="fa-solid fa-file-export"></i>
-                    <button id="exportBtn">Export Chat</button>
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </div>
+                    <span class="logo-text">AI Chat</span>
                 </div>
             </div>
-            <div class="sidebar-profile">
 
-                <i class="fa-solid fa-user"></i>
-                Profile
+            <div class="sidebar-content">
+                <button class="new-chat-btn" onclick="startNewChat()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    New Chat
+                </button>
+
+                <div class="menu-section">
+                    <span class="menu-label">Menu</span>
+                    <div class="menu-items">
+                        <a href="/history_page" class="menu-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>History</span>
+                        </a>
+                        <div class="menu-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+                            </svg>
+                            <span>Settings</span>
+                        </div>
+                        <button id="exportBtn" class="menu-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span>Export Chat</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">{{ user_name or 'Guest User' }}</span>
+                        <span class="user-status">Online</span>
+                    </div>
+                </div>
             </div>
         </aside>
+
+        <!-- Main Content -->
         <div class="main-content">
             <!-- Header -->
-            <div class="header">
-                <div class="header-title">
-                    <h2>🤖 AI Chat</h2>
-                    <span class="header-subtitle">(In-memory session — no persistence)</span>
-                </div>
-                <div class="search-box">
-                    <input type="text" placeholder="Search.....">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </div>
-
-                <!-- Desktop: Show selectors inline -->
-                <div class="model-selector desktop-only">
-                    <label for="providerSelect">Provider:</label>
-                    <select id="providerSelect" class="model-select">
-                        <option value="groq">Groq</option>
-                        <option value="gemini">Gemini</option>
-                        <option value="openrouter">OpenRouter (Free)</option>
-                    </select>
-                </div>
-
-                <div class="model-selector desktop-only">
-                    <label for="modelSelect">Model:</label>
-                    <select id="modelSelect" class="model-select">
-                        <option value="">Loading models...</option>
-                    </select>
-                </div>
-
-                <div class="tts-selector desktop-only">
-                    <label for="ttsSelect">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                        </svg>
-                    </label>
-                    <select id="ttsSelect" class="tts-select">
-                        <option value="disabled">TTS: Disabled</option>
-                        <optgroup label="English Voices (PlayAI)">
-                            <option value="playai-tts|Arista-PlayAI">Arista (Female)</option>
-                            <option value="playai-tts|Atlas-PlayAI">Atlas (Male)</option>
-                            <option value="playai-tts|Basil-PlayAI">Basil (Male)</option>
-                            <option value="playai-tts|Briggs-PlayAI">Briggs (Male)</option>
-                            <option value="playai-tts|Calum-PlayAI">Calum (Male)</option>
-                            <option value="playai-tts|Celeste-PlayAI">Celeste (Female)</option>
-                            <option value="playai-tts|Cheyenne-PlayAI">Cheyenne (Female)</option>
-                            <option value="playai-tts|Chip-PlayAI">Chip (Male)</option>
-                            <option value="playai-tts|Cillian-PlayAI">Cillian (Male)</option>
-                            <option value="playai-tts|Deedee-PlayAI">Deedee (Female)</option>
-                            <option value="playai-tts|Fritz-PlayAI" selected>Fritz (Male)</option>
-                            <option value="playai-tts|Gail-PlayAI">Gail (Female)</option>
-                            <option value="playai-tts|Indigo-PlayAI">Indigo (Neutral)</option>
-                            <option value="playai-tts|Mamaw-PlayAI">Mamaw (Female)</option>
-                            <option value="playai-tts|Mason-PlayAI">Mason (Male)</option>
-                            <option value="playai-tts|Mikail-PlayAI">Mikail (Male)</option>
-                            <option value="playai-tts|Mitch-PlayAI">Mitch (Male)</option>
-                            <option value="playai-tts|Quinn-PlayAI">Quinn (Female)</option>
-                            <option value="playai-tts|Thunder-PlayAI">Thunder (Male)</option>
-                        </optgroup>
-                        <optgroup label="Arabic Voices (PlayAI)">
-                            <option value="playai-tts-arabic|Ahmad-PlayAI">Ahmad (Male)</option>
-                            <option value="playai-tts-arabic|Amira-PlayAI">Amira (Female)</option>
-                            <option value="playai-tts-arabic|Khalid-PlayAI">Khalid (Male)</option>
-                            <option value="playai-tts-arabic|Nasser-PlayAI">Nasser (Male)</option>
-                        </optgroup>
-                    </select>
-                </div>
-                <div class="icon-btn">
-                    <i class="fa-solid fa-user"></i>
-                </div>
-
-                <!-- Mobile: Hamburger menu button -->
-                <button class="hamburger-btn mobile-only" id="hamburgerBtn" title="Settings"
-                    aria-label="Open settings menu">
+            <header class="header">
+                <button class="sidebar-toggle mobile-only" id="sidebarToggle">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="3" y1="12" x2="21" y2="12"></line>
                         <line x1="3" y1="6" x2="21" y2="6"></line>
                         <line x1="3" y1="18" x2="21" y2="18"></line>
                     </svg>
                 </button>
-            </div>
+
+                <div class="header-title">
+                    <h1>AI Assistant</h1>
+                    <div class="status-badge">
+                        <span class="status-dot"></span>
+                        <span>Ready to chat</span>
+                    </div>
+                </div>
+
+                <div class="header-controls desktop-only">
+                    <div class="select-group">
+                        <label for="providerSelect">Provider</label>
+                        <select id="providerSelect" class="custom-select">
+                            <option value="groq">Groq</option>
+                            <option value="gemini">Gemini</option>
+                            <option value="openrouter">OpenRouter</option>
+                        </select>
+                    </div>
+
+                    <div class="select-group">
+                        <label for="modelSelect">Model</label>
+                        <select id="modelSelect" class="custom-select">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+
+                    <div class="select-group">
+                        <label for="ttsSelect">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            </svg>
+                            TTS
+                        </label>
+                        <select id="ttsSelect" class="custom-select">
+                            <option value="disabled">Disabled</option>
+                            <optgroup label="English Voices">
+                                <option value="playai-tts|Fritz-PlayAI" selected>Fritz (Male)</option>
+                                <option value="playai-tts|Arista-PlayAI">Arista (Female)</option>
+                                <option value="playai-tts|Atlas-PlayAI">Atlas (Male)</option>
+                                <option value="playai-tts|Celeste-PlayAI">Celeste (Female)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="settings-btn mobile-only" id="hamburgerBtn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                </button>
+            </header>
 
             <!-- Mobile Settings Panel -->
             <div class="settings-panel" id="settingsPanel">
                 <div class="settings-header">
                     <h3>Settings</h3>
-                    <button class="close-settings-btn" id="closeSettingsBtn" aria-label="Close settings">
+                    <button class="close-settings-btn" id="closeSettingsBtn">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -145,161 +176,118 @@
                         <select id="mobileProviderSelect" class="setting-select">
                             <option value="groq">Groq</option>
                             <option value="gemini">Gemini</option>
-                            <option value="openrouter">OpenRouter (Free)</option>
+                            <option value="openrouter">OpenRouter</option>
                         </select>
                     </div>
-
                     <div class="setting-group">
                         <label for="mobileModelSelect">Model</label>
                         <select id="mobileModelSelect" class="setting-select">
-                            <option value="">Loading models...</option>
+                            <option value="">Loading...</option>
                         </select>
                     </div>
-
                     <div class="setting-group">
-                        <label for="mobileTTSSelect">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 6px;">
-                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                            </svg>
-                            Text-to-Speech
-                        </label>
+                        <label for="mobileTTSSelect">Text-to-Speech</label>
                         <select id="mobileTTSSelect" class="setting-select">
                             <option value="disabled">Disabled</option>
-                            <optgroup label="English Voices (PlayAI)">
-                                <option value="playai-tts|Arista-PlayAI">Arista (Female)</option>
-                                <option value="playai-tts|Atlas-PlayAI">Atlas (Male)</option>
-                                <option value="playai-tts|Basil-PlayAI">Basil (Male)</option>
-                                <option value="playai-tts|Briggs-PlayAI">Briggs (Male)</option>
-                                <option value="playai-tts|Calum-PlayAI">Calum (Male)</option>
-                                <option value="playai-tts|Celeste-PlayAI">Celeste (Female)</option>
-                                <option value="playai-tts|Cheyenne-PlayAI">Cheyenne (Female)</option>
-                                <option value="playai-tts|Chip-PlayAI">Chip (Male)</option>
-                                <option value="playai-tts|Cillian-PlayAI">Cillian (Male)</option>
-                                <option value="playai-tts|Deedee-PlayAI">Deedee (Female)</option>
+                            <optgroup label="English Voices">
                                 <option value="playai-tts|Fritz-PlayAI" selected>Fritz (Male)</option>
-                                <option value="playai-tts|Gail-PlayAI">Gail (Female)</option>
-                                <option value="playai-tts|Indigo-PlayAI">Indigo (Neutral)</option>
-                                <option value="playai-tts|Mamaw-PlayAI">Mamaw (Female)</option>
-                                <option value="playai-tts|Mason-PlayAI">Mason (Male)</option>
-                                <option value="playai-tts|Mikail-PlayAI">Mikail (Male)</option>
-                                <option value="playai-tts|Mitch-PlayAI">Mitch (Male)</option>
-                                <option value="playai-tts|Quinn-PlayAI">Quinn (Female)</option>
-                                <option value="playai-tts|Thunder-PlayAI">Thunder (Male)</option>
-                            </optgroup>
-                            <optgroup label="Arabic Voices (PlayAI)">
-                                <option value="playai-tts-arabic|Ahmad-PlayAI">Ahmad (Male)</option>
-                                <option value="playai-tts-arabic|Amira-PlayAI">Amira (Female)</option>
-                                <option value="playai-tts-arabic|Khalid-PlayAI">Khalid (Male)</option>
-                                <option value="playai-tts-arabic|Nasser-PlayAI">Nasser (Male)</option>
+                                <option value="playai-tts|Arista-PlayAI">Arista (Female)</option>
                             </optgroup>
                         </select>
                     </div>
                 </div>
             </div>
-
-            <!-- Settings overlay for mobile -->
             <div class="settings-overlay" id="settingsOverlay"></div>
 
             <!-- Chat Area -->
             <div class="chat-container" id="chatContainer">
+                <!-- Welcome Screen -->
                 <div class="welcome-screen" id="welcomeScreen">
                     <div class="welcome-content">
-                        <h1>🤖 Welcome to Groq AI Chat</h1>
-                        <p class="welcome-subtitle">Powered by 20+ open-source AI models</p>
-
-                        <!-- Quick Guide -->
-                        <div class="quick-guide">
-                            <div class="guide-card">
-                                <div class="guide-icon">🎯</div>
-                                <h3>Choose Your Model</h3>
-                                <p>Select from <strong>20+ AI models</strong> in the dropdown above</p>
-                                <div class="model-examples">
-                                    <span class="model-tag">Mixtral 8x7B</span>
-                                    <span class="model-tag">LLaMA 3.1</span>
-                                    <span class="model-tag">Qwen 2.5</span>
-                                </div>
+                        <div class="welcome-icon">
+                            <div class="welcome-icon-inner">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                    <circle cx="12" cy="10" r="1" fill="currentColor"></circle>
+                                    <circle cx="8" cy="10" r="1" fill="currentColor"></circle>
+                                    <circle cx="16" cy="10" r="1" fill="currentColor"></circle>
+                                </svg>
                             </div>
+                        </div>
+                        <h1 class="welcome-title">How can I help you today?</h1>
+                        <p class="welcome-subtitle">I'm your AI assistant powered by cutting-edge language models</p>
 
-                            <div class="guide-card">
-                                <div class="guide-icon">🔊</div>
-                                <h3>Text-to-Speech</h3>
-                                <p>Choose from <strong>23 voices</strong> to hear responses</p>
-                                <p class="guide-hint">Click <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2"
-                                        style="display: inline; vertical-align: middle;">
-                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                                    </svg> on any response</p>
+                        <!-- Feature Cards -->
+                        <div class="feature-cards">
+                            <div class="feature-card">
+                                <div class="feature-icon">🎯</div>
+                                <h3>Smart Responses</h3>
+                                <p>Get intelligent answers powered by 20+ AI models</p>
                             </div>
-
-                            <div class="guide-card">
-                                <div class="guide-icon">💬</div>
-                                <h3>Start Chatting</h3>
-                                <p>Type your message below or try an example prompt</p>
-                                <p class="guide-hint"><kbd>Enter</kbd> to send • <kbd>Shift+Enter</kbd> for new line</p>
+                            <div class="feature-card">
+                                <div class="feature-icon">💻</div>
+                                <h3>Code Assistant</h3>
+                                <p>Write, debug, and explain code in any language</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">🔊</div>
+                                <h3>Voice Output</h3>
+                                <p>Listen to responses with natural-sounding voices</p>
                             </div>
                         </div>
 
-                        <!-- Example Prompts -->
-                        <div class="prompts-section">
-                            <h3 class="prompts-title">✨ Try These Prompts</h3>
-                            <div class="example-prompts">
-                                <button class="example-prompt" data-prompt="Explain quantum computing in simple terms">
-                                    <span class="prompt-icon">💡</span>
-                                    <span class="prompt-text">Explain quantum computing</span>
+                        <!-- Quick Prompts -->
+                        <div class="quick-prompts">
+                            <h4 class="prompts-heading">Try asking</h4>
+                            <div class="prompt-grid">
+                                <button class="prompt-chip" data-prompt="Explain quantum computing in simple terms">
+                                    <span class="chip-icon">💡</span>
+                                    <span>Explain quantum computing</span>
                                 </button>
-                                <button class="example-prompt" data-prompt="Write a Python function to sort a list">
-                                    <span class="prompt-icon">💻</span>
-                                    <span class="prompt-text">Write Python code</span>
+                                <button class="prompt-chip" data-prompt="Write a Python function to sort a list">
+                                    <span class="chip-icon">🐍</span>
+                                    <span>Write Python code</span>
                                 </button>
-                                <button class="example-prompt"
+                                <button class="prompt-chip"
                                     data-prompt="What are the best practices for web development?">
-                                    <span class="prompt-icon">🌐</span>
-                                    <span class="prompt-text">Web development tips</span>
+                                    <span class="chip-icon">🌐</span>
+                                    <span>Web development tips</span>
                                 </button>
-                                <button class="example-prompt" data-prompt="Help me brainstorm ideas for a startup">
-                                    <span class="prompt-icon">🚀</span>
-                                    <span class="prompt-text">Brainstorm ideas</span>
-                                </button>
-                                <button class="example-prompt"
-                                    data-prompt="Create a detailed comparison table of programming languages">
-                                    <span class="prompt-icon">📊</span>
-                                    <span class="prompt-text">Compare programming languages</span>
-                                </button>
-                                <button class="example-prompt" data-prompt="Write a creative short story about AI">
-                                    <span class="prompt-icon">✍️</span>
-                                    <span class="prompt-text">Write a creative story</span>
+                                <button class="prompt-chip" data-prompt="Help me brainstorm ideas for a startup">
+                                    <span class="chip-icon">🚀</span>
+                                    <span>Brainstorm startup ideas</span>
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Messages Container -->
                 <div class="messages" id="messages">
-                    <!-- Messages will be added here -->
+                    <!-- Messages will be added here dynamically -->
                 </div>
             </div>
 
             <!-- Input Area -->
             <div class="input-container">
                 <div class="input-wrapper">
-                    <textarea id="messageInput" placeholder="Send a message..." rows="1" maxlength="4000"></textarea>
-                    <button id="sendBtn" class="send-btn" disabled>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                    </button>
+                    <textarea id="messageInput" placeholder="Type your message..." rows="1" maxlength="4000"></textarea>
+                    <div class="input-actions">
+                        <button id="sendBtn" class="send-btn" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <div class="input-footer">
-                    <small>Press Enter to send, Shift+Enter for new line</small>
+                <div class="input-hint">
+                    <kbd>Enter</kbd> to send · <kbd>Shift + Enter</kbd> for new line
                 </div>
             </div>
         </div>
     </div>
-
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
