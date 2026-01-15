@@ -1,10 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
 from datetime import datetime
 
 # Create SQLAlchemy instance - will be initialized with app in app.py
 db = SQLAlchemy()
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))

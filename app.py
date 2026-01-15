@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session, Response
 import os
 from datetime import datetime
+from datetime import timedelta
 from dotenv import load_dotenv
 from groq_client import GroqClient
 from gemini_client import GeminiClient
@@ -10,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from database import db, User, Messages, Chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
 load_dotenv()
 
@@ -18,10 +20,24 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:bharti@localhost:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 if 'sqlalchemy' not in app.extensions:
     db.init_app(app)
-app.secret_key = secrets.token_hex(16)
+# Use fixed secret key from env or default (don't regenerate on every restart)
+app.secret_key = os.getenv('SECRET_KEY', 'your-fixed-secret-key-change-in-production')
+
+# Configure session lifetime (Instagram-like persistence)
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=365)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
 
 # Initialize OAuth
 oauth = OAuth(app)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # Configure Google OAuth
 google = oauth.register(
@@ -74,13 +90,13 @@ except Exception as e:
     openrouter_client = None
 
 
-# Helper function to get current user
-def get_current_user():
-    """Get the currently logged in user from session"""
-    user_id = session.get('user_id')
-    if user_id:
-        return User.query.get(user_id)
-    return None
+# Helper function to get current user - REMOVED, use current_user instead
+# def get_current_user():
+#     """Get the currently logged in user from session"""
+#     user_id = session.get('user_id')
+#     if user_id:
+#         return User.query.get(user_id)
+#     return None
 
 
 # Helper function to get or create current chat
@@ -108,10 +124,9 @@ def get_or_create_chat(user_id):
 @app.route('/send', methods=['POST'])
 def send_msg():
     data = request.json
-    user = get_current_user()
     
-    if user:
-        chat = get_or_create_chat(user.id)
+    if current_user.is_authenticated:
+        chat = get_or_create_chat(current_user.id)
         new_message = Messages(
             chat_id=chat.id,
             content_text=data.get("messages"),
@@ -124,42 +139,46 @@ def send_msg():
 
 
 @app.route('/history_page')
+@login_required
 def history_page():
     chats = []
     
-    # Get all chats from database (no login required)
-    all_chats = Chat.query.order_by(Chat.created_at.desc()).all()
-    print(f"[DEBUG] history_page - found {len(all_chats)} total chats")
-    
-    for chat in all_chats:
-        chat_data = {
-            'id': chat.id,
-            'title': chat.title,
-            'created_at': chat.created_at.isoformat() if chat.created_at else None,
-            'messages': []
-        }
-        msgs = Messages.query.filter_by(chat_id=chat.id).order_by(Messages.created_at).all()
-        for msg in msgs:
-            text = msg.content_text or ''
-            role = 'assistant' if text.startswith('[ASSISTANT]') else 'user'
-            content = text.replace('[USER] ', '').replace('[ASSISTANT] ', '')
-            chat_data['messages'].append({
-                'role': role,
-                'content': content,
-                'time': msg.created_at.isoformat() if msg.created_at else None
-            })
-        chats.append(chat_data)
+    # Only show chats for the logged-in user
+    if current_user.is_authenticated:
+        user_chats = Chat.query.filter_by(user_id=current_user.id).order_by(Chat.created_at.desc()).all()
+        print(f"[DEBUG] history_page - found {len(user_chats)} chats for user {current_user.id}")
+        
+        for chat in user_chats:
+            chat_data = {
+                'id': chat.id,
+                'title': chat.title,
+                'created_at': chat.created_at.isoformat() if chat.created_at else None,
+                'messages': []
+            }
+            msgs = Messages.query.filter_by(chat_id=chat.id).order_by(Messages.created_at).all()
+            for msg in msgs:
+                text = msg.content_text or ''
+                role = 'assistant' if text.startswith('[ASSISTANT]') else 'user'
+                content = text.replace('[USER] ', '').replace('[ASSISTANT] ', '')
+                chat_data['messages'].append({
+                    'role': role,
+                    'content': content,
+                    'time': msg.created_at.isoformat() if msg.created_at else None
+                })
+            chats.append(chat_data)
+    else:
+        print("[DEBUG] history_page - no user logged in, showing empty history")
     
     return render_template('history.html', chats=chats)
 
 
 @app.route("/history", methods=["GET"])
+@login_required
 def history():
     try:
-        user = get_current_user()
         formatted = []
         
-        if user:
+        if current_user.is_authenticated:
             chat_id = session.get('current_chat_id')
             if chat_id:
                 messages = Messages.query.filter_by(chat_id=chat_id).order_by(Messages.created_at).all()
@@ -177,12 +196,12 @@ def history():
 
 
 @app.route('/exportchat', methods=['GET'])
+@login_required
 def export_chat():
-    user = get_current_user()
     chat_id = session.get('current_chat_id')
     
     with open("chat.txt", "w", encoding="utf-8") as file:
-        if user and chat_id:
+        if current_user.is_authenticated and chat_id:
             messages = Messages.query.filter_by(chat_id=chat_id).order_by(Messages.created_at).all()
             for msg in messages:
                 file.write(f"{msg.role}:{msg.content}\n")
@@ -273,10 +292,9 @@ def chat():
                 'error': 'Message is required'
             }), 400
         
-        user = get_current_user()
         chat_history = []
         
-        print(f"[DEBUG] /api/chat - user logged in: {user is not None}")
+        print(f"[DEBUG] /api/chat - user logged in: {current_user.is_authenticated}")
         
         # Get or create chat (works with or without login)
         chat_id = session.get('current_chat_id')
@@ -288,7 +306,7 @@ def chat():
         if not chat_obj:
             # Create new chat (for guest users, user_id will be None)
             chat_obj = Chat(
-                user_id=user.id if user else None,
+                user_id=current_user.id if current_user.is_authenticated else None,
                 title="New Chat",
                 created_at=datetime.utcnow()
             )
@@ -377,12 +395,12 @@ def chat():
 
 
 @app.route('/api/history', methods=['GET'])
+@login_required
 def get_history():
     """Get chat history for current session from database"""
-    user = get_current_user()
     chat_id = session.get('current_chat_id')
     
-    if user and chat_id:
+    if current_user.is_authenticated and chat_id:
         messages = Messages.query.filter_by(chat_id=chat_id).order_by(Messages.created_at).all()
         history = [{
             'role': msg.role,
@@ -402,12 +420,12 @@ def get_history():
 
 
 @app.route('/api/clear', methods=['POST'])
+@login_required
 def clear_history():
     """Clear chat history for current chat"""
-    user = get_current_user()
     chat_id = session.get('current_chat_id')
     
-    if user and chat_id:
+    if current_user.is_authenticated and chat_id:
         Messages.query.filter_by(chat_id=chat_id).delete()
         db.session.commit()
     
@@ -418,13 +436,13 @@ def clear_history():
 
 
 @app.route('/api/new-chat', methods=['POST'])
+@login_required
 def newchat():
     """Start a new chat - creates new chat in database"""
-    user = get_current_user()
     
-    if user:
+    if current_user.is_authenticated:
         new_chat = Chat(
-            user_id=user.id,
+            user_id=current_user.id,
             title="New Chat",
             created_at=datetime.utcnow()
         )
@@ -445,12 +463,12 @@ def newchat():
 
 
 @app.route('/api/sessions', methods=['GET'])
+@login_required
 def get_sessions():
     """Get all chat sessions for the current user"""
-    user = get_current_user()
     
-    if user:
-        chats = Chat.query.filter_by(user_id=user.id).order_by(Chat.updated_at.desc()).all()
+    if current_user.is_authenticated:
+        chats = Chat.query.filter_by(user_id=current_user.id).order_by(Chat.updated_at.desc()).all()
         sessions = [{
             'id': chat.id,
             'title': chat.title,
@@ -471,15 +489,15 @@ def get_sessions():
 
 
 @app.route('/api/switch-session', methods=['POST'])
+@login_required
 def switch_session():
     """Switch to a different chat session"""
-    user = get_current_user()
     data = request.json
     chat_id = data.get('chat_id')
     
-    if user and chat_id:
+    if current_user.is_authenticated and chat_id:
         chat = Chat.query.get(chat_id)
-        if chat and chat.user_id == user.id:
+        if chat and chat.user_id == current_user.id:
             session['current_chat_id'] = chat.id
             return jsonify({
                 'success': True,
@@ -497,6 +515,7 @@ def switch_session():
 
 
 @app.route('/api/delete-chat', methods=['POST'])
+@login_required
 def delete_chat():
     """Delete a chat and all its messages"""
     data = request.json
@@ -531,15 +550,15 @@ def delete_chat():
 
 
 @app.route('/api/stats', methods=['GET'])
+@login_required
 def get_stats():
     """Get statistics"""
-    user = get_current_user()
     
-    if user:
-        total_chats = Chat.query.filter_by(user_id=user.id).count()
-        total_messages = Messages.query.join(Chat).filter(Chat.user_id == user.id).count()
-        user_messages = Messages.query.join(Chat).filter(Chat.user_id == user.id, Messages.role == 'user').count()
-        assistant_messages = Messages.query.join(Chat).filter(Chat.user_id == user.id, Messages.role == 'assistant').count()
+    if current_user.is_authenticated:
+        total_chats = Chat.query.filter_by(user_id=current_user.id).count()
+        total_messages = Messages.query.join(Chat).filter(Chat.user_id == current_user.id).count()
+        user_messages = Messages.query.join(Chat).filter(Chat.user_id == current_user.id, Messages.role == 'user').count()
+        assistant_messages = Messages.query.join(Chat).filter(Chat.user_id == current_user.id, Messages.role == 'assistant').count()
         
         return jsonify({
             'success': True,
@@ -587,11 +606,11 @@ def health_check():
 
 @app.route('/newChat', methods=['GET'])
 def newChat():
-    user = get_current_user()
+    # user = get_current_user() # Handled by current_user now
     
-    if user:
+    if current_user.is_authenticated:
         new_chat = Chat(
-            user_id=user.id,
+            user_id=current_user.id,
             title="New Chat",
             created_at=datetime.utcnow()
         )
@@ -660,14 +679,20 @@ def text_to_speech():
 
 @app.route('/')
 def login_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
     return render_template('login.html')
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
     if request.method == "POST":
         email_id = request.form.get("email_id")
         password = request.form.get("password")
+        remember = True if request.form.get("remember") else False
 
         print(f"[DEBUG] Login attempt - email: {email_id}")
         
@@ -692,8 +717,10 @@ def login():
                 user.password = generate_password_hash(password)
                 db.session.commit()
                 
-                session['user_id'] = user.id
-                session['user_name'] = user.name
+                
+                login_user(user, remember=remember)
+                # session['user_id'] = user.id
+                # session['user_name'] = user.name
                 
                 latest_chat = Chat.query.filter_by(user_id=user.id).order_by(Chat.created_at.desc()).first()
                 if latest_chat:
@@ -707,8 +734,9 @@ def login():
         # Normal hashed password check
         if check_password_hash(user.password, password):
             print(f"[DEBUG] Login successful!")
-            session['user_id'] = user.id
-            session['user_name'] = user.name
+            login_user(user, remember=remember)
+            # session['user_id'] = user.id
+            # session['user_name'] = user.name
             
             latest_chat = Chat.query.filter_by(user_id=user.id).order_by(Chat.created_at.desc()).first()
             if latest_chat:
@@ -726,7 +754,8 @@ def login():
 def google_login():
     """Initiate Google OAuth login"""
     redirect_uri = url_for('google_callback', _external=True)
-    return google.authorize_redirect(redirect_uri)
+    # prompt='select_account' forces Google to show account chooser every time
+    return google.authorize_redirect(redirect_uri, prompt='select_account')
 
 
 @app.route('/callback')
@@ -771,8 +800,9 @@ def google_callback():
                 print(f"[DEBUG] Created new user via Google: {user.id}")
         
         # Log the user in
-        session['user_id'] = user.id
-        session['user_name'] = user.name
+        login_user(user)
+        # session['user_id'] = user.id
+        # session['user_name'] = user.name
         
         # Get or create latest chat
         latest_chat = Chat.query.filter_by(user_id=user.id).order_by(Chat.created_at.desc()).first()
@@ -790,21 +820,26 @@ def google_callback():
 
 
 @app.route('/logout')
+@login_required
 def logout():
     """Logout user and clear session"""
+    logout_user()
     session.clear()
     return redirect(url_for('login_page'))
 
 
 @app.route('/index')
+@login_required
 def index():
-    user = get_current_user()
-    user_name = user.name if user else "Guest User"
+    user_name = current_user.name if current_user.is_authenticated else "Guest User"
     return render_template('index.html', user_name=user_name)
 
 
 @app.route('/signup', methods=["GET", "POST"])
 def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
     if request.method == "POST":
         id = request.form.get("userid")
         name = request.form.get("name")
